@@ -1,0 +1,4 @@
+[
+	{ "keys": [ "ctrl+m", "ctrl+t" ], "command": "take_server" },
+	{ "keys": [ "ctrl+m", "ctrl+r" ], "command": "release_server" },
+]

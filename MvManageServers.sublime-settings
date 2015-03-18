@@ -1,0 +1,7 @@
+{
+	//Bugzilla login
+	"Bugzilla_login" 		: "",
+
+	//Bugzilla login cookie
+	"Bugzilla_logincookie"	: "",
+}
