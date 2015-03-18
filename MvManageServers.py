@@ -1,5 +1,4 @@
 import sublime, sublime_plugin
-import os.path
 import json
 import urllib
 
@@ -19,7 +18,6 @@ class TakeServerCommand( sublime_plugin.WindowCommand ):
 		result, response, error = make_json_request( 'Servers_Current_Status', self.login, self.cookie )
 
 		if not result:
-			self.error = True
 			return sublime.error_message( error )
 
 		server_list = response[ 'data' ][ 'available_servers' ] + response[ 'data' ][ 'available_tunnel_servers' ]
@@ -43,7 +41,6 @@ class TakeServerCommand( sublime_plugin.WindowCommand ):
 		result, response, error = make_json_request( 'Server_Take', self.login, self.cookie, str( server_id ) )
 
 		if not result:
-			self.error = True
 			return sublime.error_message( error )
 
 		return sublime.status_message( 'Server ' + servers[ index ] + ' taken' )
@@ -67,7 +64,6 @@ class ReleaseServerCommand( sublime_plugin.WindowCommand ):
 		result, response, error = make_json_request( 'Servers_Current_Status', self.login, self.cookie )
 
 		if not result:
-			self.error = True
 			return sublime.error_message( error )
 
 		server_list = response[ 'data' ][ 'unavailable_servers' ]
@@ -93,7 +89,6 @@ class ReleaseServerCommand( sublime_plugin.WindowCommand ):
 		result, response, error = make_json_request( 'Server_Release', self.login, self.cookie, str( server_id ) )
 
 		if not result:
-			self.error = True
 			return sublime.error_message( error )
 
 		return sublime.status_message( 'Server ' + servers[ index ] + ' released' )
