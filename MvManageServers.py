@@ -4,10 +4,10 @@ import urllib
 
 class TakeServerCommand( sublime_plugin.WindowCommand ):
 	def run( self ):
-		servers 		= []
-		settings		= sublime.load_settings( 'MvManageServers.sublime-settings' )
-		self.login		= str( settings.get( 'Bugzilla_login' ) )
-		self.cookie		= str( settings.get( 'Bugzilla_logincookie' ) )
+		server_list	= []
+		settings	= sublime.load_settings( 'MvManageServers.sublime-settings' )
+		self.login	= str( settings.get( 'Bugzilla_login' ) )
+		self.cookie	= str( settings.get( 'Bugzilla_logincookie' ) )
 
 		if self.login == '':
 			return sublime.message_dialog( 'Missing Bugzilla login setting' )
@@ -20,38 +20,33 @@ class TakeServerCommand( sublime_plugin.WindowCommand ):
 		if not result:
 			return sublime.error_message( error )
 
-		server_list = response[ 'data' ][ 'available_servers' ] + response[ 'data' ][ 'available_tunnel_servers' ]
+		server_list = sorted( response[ 'data' ][ 'available_servers' ] + response[ 'data' ][ 'available_tunnel_servers' ], key = lambda k: k[ 'hostname' ] )
 
-		for server in server_list:
-			servers.append( server[ 'hostname' ] )
-
-		if len( servers ) == 0:
+		if len( server_list ) == 0:
 			return sublime.message_dialog( 'No servers available to check out' )
 
-		self.show_quick_panel( servers, lambda index: self.server_select_callback( server_list, servers, index ) )
+		self.show_quick_panel( [ server[ 'hostname' ] for server in server_list ], lambda index: self.server_select_callback( server_list, index ) )
 
-	def server_select_callback( self, server_list, servers, index ):
+	def server_select_callback( self, server_list, index ):
 		if index == -1:
 			return
 
-		for server in server_list:
-			if server[ 'hostname' ] == servers[ index ]:
-				server_id = server[ 'id' ]
+		server = server_list[ index ]
 
-		result, response, error = make_json_request( 'Server_Take', self.login, self.cookie, str( server_id ) )
+		result, response, error = make_json_request( 'Server_Take', self.login, self.cookie, str( server[ 'id' ] ) )
 
 		if not result:
 			return sublime.error_message( error )
 
-		return sublime.status_message( 'Server ' + servers[ index ] + ' taken' )
+		return sublime.status_message( 'Server ' + server[ 'hostname' ] + ' taken' )
 
 	def show_quick_panel( self, entries, on_select, on_highlight = None ):
 		sublime.set_timeout( lambda: self.window.show_quick_panel( entries, on_select, on_highlight = on_highlight ), 10 )
 
 class ReleaseServerCommand( sublime_plugin.WindowCommand ):
 	def run( self ):
-		servers 			= []
-		servers_formatted	= []
+		server_list			= []
+		my_servers			= []
 		settings			= sublime.load_settings( 'MvManageServers.sublime-settings' )
 		self.login			= str( settings.get( 'Bugzilla_login' ) )
 		self.cookie			= str( settings.get( 'Bugzilla_logincookie' ) )
@@ -67,33 +62,30 @@ class ReleaseServerCommand( sublime_plugin.WindowCommand ):
 		if not result:
 			return sublime.error_message( error )
 
-		server_list = response[ 'data' ][ 'unavailable_servers' ]
+		server_list = sorted( response[ 'data' ][ 'unavailable_servers' ], key = lambda k: k[ 'hostname' ] )
 		user_id		= response[ 'data' ][ 'user_id' ]
 
 		for server in server_list:
 			if server[ 'user_id' ] == user_id:
-				servers_formatted.append( '{0} - {1}' . format( server[ 'hostname' ], server[ 'formatted_time' ] ) )
-				servers.append( server[ 'hostname' ] )
+				my_servers.append( server )
 
-		if len( servers ) == 0:
+		if len( my_servers ) == 0:
 			return sublime.message_dialog( 'You have no servers checked out' )
 
-		self.show_quick_panel( servers_formatted, lambda index: self.server_select_callback( server_list, servers, index ) )
+		self.show_quick_panel( [ '{0} - {1}' . format( server[ 'hostname' ], server[ 'formatted_time' ] ) for server in my_servers ], lambda index: self.server_select_callback( my_servers, index ) )
 
-	def server_select_callback( self, server_list, servers, index ):
+	def server_select_callback( self, server_list, index ):
 		if index == -1:
 			return
 
-		for server in server_list:
-			if server[ 'hostname' ] == servers[ index ]:
-				server_id = server[ 'id' ]
+		server = server_list[ index ]
 
-		result, response, error = make_json_request( 'Server_Release', self.login, self.cookie, str( server_id ) )
+		result, response, error = make_json_request( 'Server_Release', self.login, self.cookie, str( server[ 'id' ] ) )
 
 		if not result:
 			return sublime.error_message( error )
 
-		return sublime.status_message( 'Server ' + servers[ index ] + ' released' )
+		return sublime.status_message( 'Server ' + server[ 'hostname' ] + ' released' )
 
 	def show_quick_panel( self, entries, on_select, on_highlight = None ):
 		sublime.set_timeout( lambda: self.window.show_quick_panel( entries, on_select, on_highlight = on_highlight ), 10 )
@@ -101,6 +93,7 @@ class ReleaseServerCommand( sublime_plugin.WindowCommand ):
 #
 # Helper Functions
 #
+
 def make_json_request( function, login, cookie, server_id = 0 ):
 	params 	= urllib.parse.urlencode( { 'Function': function, 'server_id': server_id } ).encode( 'utf-8' )
 	req 	= urllib.request.Request( url 		= 'https://bugzilla.dev.mivamerchant.com/servers/devservers.php',
